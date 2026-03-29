@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPK & PHB的記帳本</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.cdnfonts.com/css/calibri');
+        
+        body { 
+            font-family: 'Calibri', 'Microsoft JhengHei', sans-serif; 
+            background-color: #fffaf7; 
+            color: #4a3728; 
+        }
+
+        /* 蜜桃橘色系圓角卡片 */
+        .glass-card { 
+            background: #ffffff;
+            border: 1px solid #ffdfcc; 
+            box-shadow: 0 10px 30px rgba(251, 140, 96, 0.08);
+            border-radius: 1.5rem;
+        }
+
+        /* 按鈕：珊瑚蜜桃橘 */
+        .btn-peach { 
+            background-color: #fb8c60; 
+            color: #ffffff; 
+            transition: all 0.3s ease; 
+            border-radius: 0.75rem;
+            font-weight: 700;
+        }
+        .btn-peach:hover { 
+            background-color: #f07141; 
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(251, 140, 96, 0.2);
+        }
+        
+        .btn-outline-peach { 
+            border: 2px solid #fb8c60; 
+            background-color: transparent; 
+            color: #fb8c60; 
+            transition: all 0.2s; 
+            border-radius: 0.75rem;
+            font-weight: 700;
+        }
+        .btn-outline-peach:hover {
+            background-color: #fff5f0;
+        }
+
+        .btn-active-peach { 
+            background-color: #fb8c60 !important; 
+            color: #ffffff !important; 
+        }
+
+        /* 輸入框樣式 */
+        input { 
+            border: 1.5px solid #ffcfb5; 
+            padding: 10px 14px; 
+            border-radius: 0.75rem; 
+            outline: none; 
+            transition: all 0.3s;
+            background-color: #ffffff;
+            color: #4a3728;
+        }
+        input:focus {
+            border-color: #fb8c60;
+            box-shadow: 0 0 0 4px rgba(251, 140, 96, 0.1);
+        }
+        
+        /* 列表進場動畫 */
+        .animate-slide-up { animation: slideUp 0.5s ease-out forwards; }
+        @keyframes slideUp { 
+            from { opacity: 0; transform: translateY(10px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        
+        /* 自定義滾動條 */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #fffaf7; }
+        ::-webkit-scrollbar-thumb { background: #ffcfb5; border-radius: 10px; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 lg:p-12">
+
+    <!-- 警示訊息彈窗 (自定義 Alert) -->
+    <div id="alert-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-orange-950/20 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-3xl max-w-xs w-full shadow-2xl animate-slide-up text-center border border-orange-100">
+            <div class="w-12 h-12 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h3 id="alert-message" class="text-lg font-bold text-orange-800 mb-6">請輸入代碼</h3>
+            <button onclick="closeAlert()" class="w-full btn-peach py-3">確認</button>
+        </div>
+    </div>
+
+    <!-- 刪除確認彈窗 -->
+    <div id="delete-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-orange-950/10 backdrop-blur-md">
+        <div class="bg-white p-8 rounded-3xl max-w-sm w-full shadow-2xl animate-slide-up border border-orange-100">
+            <h3 class="text-xl font-bold mb-3 text-orange-600 italic text-center">確定要刪除嗎？</h3>
+            <p class="mb-8 text-gray-500 text-sm text-center font-medium">確認刪除後，這筆紀錄會消失唷。</p>
+            <div class="flex gap-4">
+                <button onclick="closeDeleteModal()" class="flex-1 py-3 bg-gray-50 text-gray-500 rounded-2xl font-bold hover:bg-gray-100 transition">取消</button>
+                <button id="final-delete-btn" class="flex-1 py-3 bg-red-400 text-white rounded-2xl font-bold hover:bg-red-500 transition shadow-sm">確定刪除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 登入畫面 (Setup) -->
+    <div id="setup-screen" class="max-w-md mx-auto mt-20 p-10 glass-card animate-slide-up text-center">
+        <div class="mb-8">
+            <h1 class="text-4xl font-black italic tracking-tighter text-orange-500">PPK & PHB</h1>
+            <p class="text-xs font-bold text-orange-400/80 uppercase tracking-widest mt-2">專屬記帳本</p>
+        </div>
+        <div class="space-y-6">
+            <div>
+                <label class="block text-sm font-bold text-orange-600 mb-2 tracking-wide">輸入帳本代碼</label>
+                <input type="text" id="group-id" class="w-full text-center text-lg font-bold text-orange-600 placeholder:text-orange-200" placeholder="">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-orange-600 mb-2 tracking-wide">你是誰？</label>
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="selectUser('PPK')" id="btn-user-ppk" class="btn-outline-peach py-3 uppercase text-sm tracking-widest">PPK</button>
+                    <button onclick="selectUser('PHB')" id="btn-user-phb" class="btn-outline-peach py-4 uppercase text-sm tracking-widest">PHB</button>
+                </div>
+            </div>
+            <button onclick="startApp()" id="start-btn" class="w-full btn-peach py-4 text-xl mt-4 shadow-lg shadow-orange-100 uppercase tracking-widest">進入帳本</button>
+        </div>
+    </div>
+
+    <!-- 主程式畫面 (Main App) -->
+    <div id="main-app" class="hidden max-w-6xl mx-auto animate-slide-up">
+        <!-- 標頭 Header -->
+        <header class="flex flex-col md:flex-row justify-between items-end mb-12 px-2">
+            <div class="text-left w-full md:w-auto">
+                <h1 class="text-4xl font-black italic tracking-tighter text-orange-500">PPK & PHB</h1>
+                <div class="flex gap-2 mt-4">
+                    <span class="bg-orange-100/60 text-orange-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">帳本：<span id="display-group"></span></span>
+                    <span class="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide shadow-sm">身分：<span id="display-role"></span></span>
+                </div>
+            </div>
+            <div class="mt-8 md:mt-0 text-center md:text-right w-full md:w-auto">
+                <p class="text-xs font-black uppercase tracking-[0.3em] text-orange-400 mb-1">本月累計消費</p>
+                <div class="text-7xl font-black text-orange-600 leading-none tracking-tighter" id="monthly-total">$ 0</div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- 左側區域 -->
+            <div class="lg:col-span-4 space-y-8">
+                <!-- 新增區域 -->
+                <div class="p-8 glass-card">
+                    <h2 class="text-sm font-black mb-6 uppercase tracking-widest text-orange-500 border-b border-orange-50 pb-2">新增消費紀錄</h2>
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-xs font-bold text-orange-400 mb-2 tracking-wide">品項</label>
+                            <input type="text" id="item-name" class="w-full text-base font-bold text-orange-900" placeholder="">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orange-400 mb-2 tracking-wide">金額</label>
+                            <input type="text" id="item-amount" class="w-full text-base font-bold text-orange-900" placeholder="0" oninput="formatInputAmount(this)">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-orange-400 mb-3 tracking-wide">類別</label>
+                            <div class="grid grid-cols-5 gap-2">
+                                <button onclick="setCategory('食')" class="cat-btn btn-outline-peach py-2 text-xs font-bold btn-active-peach" data-cat="食">食</button>
+                                <button onclick="setCategory('衣')" class="cat-btn btn-outline-peach py-2 text-xs font-bold" data-cat="衣">衣</button>
+                                <button onclick="setCategory('住')" class="cat-btn btn-outline-peach py-2 text-xs font-bold" data-cat="住">住</button>
+                                <button onclick="setCategory('行')" class="cat-btn btn-outline-peach py-2 text-xs font-bold" data-cat="行">行</button>
+                                <button onclick="setCategory('樂')" class="cat-btn btn-outline-peach py-2 text-xs font-bold" data-cat="樂">樂</button>
+                            </div>
+                        </div>
+                        <button onclick="addRecord()" class="w-full btn-peach py-4 uppercase text-sm tracking-widest mt-2 shadow-md shadow-orange-100">新增</button>
+                    </div>
+                </div>
+
+                <!-- 今日戰況 -->
+                <div class="p-8 glass-card bg-orange-50/20 border-orange-100 shadow-none">
+                    <h2 class="text-sm font-black mb-6 uppercase tracking-widest text-orange-500 text-center">今日消費累計</h2>
+                    <div class="flex justify-around items-center mb-6">
+                        <div class="text-center">
+                            <p class="text-xs text-orange-400 font-bold uppercase mb-2">PPK 今日</p>
+                            <div class="text-3xl font-black text-orange-600" id="total-a">$ 0</div>
+                        </div>
+                        <div class="h-10 w-px bg-orange-200/50"></div>
+                        <div class="text-center">
+                            <p class="text-xs text-orange-400 font-bold uppercase mb-2">PHB 今日</p>
+                            <div class="text-3xl font-black text-orange-600" id="total-b">$ 0</div>
+                        </div>
+                    </div>
+                    <div class="pt-4 border-t border-orange-100/50 text-center">
+                        <p class="text-xs font-bold uppercase text-orange-400 mb-1">今日累計總額</p>
+                        <div class="text-2xl font-black text-orange-600" id="grand-total">$ 0</div>
+                    </div>
+                </div>
+
+                <!-- 類別明細 -->
+                <div class="p-8 glass-card">
+                    <h2 class="text-sm font-black mb-6 uppercase tracking-widest text-orange-500 border-b border-orange-50 pb-2">本月類別累計</h2>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center text-sm font-bold">
+                            <span class="bg-orange-50 text-orange-600 px-3 py-1 rounded-full">食</span>
+                            <span id="cat-food" class="text-orange-600 text-base">$ 0</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm font-bold">
+                            <span class="bg-orange-50 text-orange-600 px-3 py-1 rounded-full">衣</span>
+                            <span id="cat-cloth" class="text-orange-600 text-base">$ 0</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm font-bold">
+                            <span class="bg-orange-50 text-orange-600 px-3 py-1 rounded-full">住</span>
+                            <span id="cat-home" class="text-orange-600 text-base">$ 0</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm font-bold">
+                            <span class="bg-orange-50 text-orange-600 px-3 py-1 rounded-full">行</span>
+                            <span id="cat-trans" class="text-orange-600 text-base">$ 0</span>
+                        </div>
+                        <div class="flex justify-between items-center text-sm font-bold">
+                            <span class="bg-orange-50 text-orange-600 px-3 py-1 rounded-full">樂</span>
+                            <span id="cat-play" class="text-orange-600 text-base">$ 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側歷史列表 -->
+            <div class="lg:col-span-8">
+                <div class="mb-6 flex justify-between items-end border-b-2 border-orange-100 pb-4 px-2">
+                    <h2 class="text-3xl font-black uppercase tracking-tighter text-orange-500">歷史消費紀錄</h2>
+                    <button onclick="logout()" class="text-xs font-bold uppercase tracking-widest text-orange-300 hover:text-orange-600 transition-all">登出</button>
+                </div>
+                <div id="list-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+                    <!-- 動態載入 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase 邏輯 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA57M4Y_qXNA60BKP5GycyJnlAZEmcRteI",
+            authDomain: "ppkphb-ledger.firebaseapp.com",
+            projectId: "ppkphb-ledger",
+            storageBucket: "ppkphb-ledger.firebasestorage.app",
+            messagingSenderId: "636544970929",
+            appId: "1:636544970929:web:e5b8385cc0fb0978c1b290"
+        };
+        
+        const finalAppId = "ppkphb-production";
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let user, currentGroupId, currentUserRole, unsubscribe = null, pendingDeleteId = null;
+        let selectedCategory = '食';
+
+        // 自定義 Alert 系統
+        window.showAlert = (msg) => {
+            document.getElementById('alert-message').innerText = msg;
+            document.getElementById('alert-modal').classList.remove('hidden');
+        };
+        window.closeAlert = () => {
+            document.getElementById('alert-modal').classList.add('hidden');
+        };
+
+        window.formatInputAmount = (input) => {
+            let value = input.value.replace(/[^0-9]/g, '');
+            input.value = value !== '' ? Number(value).toLocaleString() : '';
+        };
+
+        window.setCategory = (cat) => {
+            selectedCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                btn.classList.toggle('btn-active-peach', btn.getAttribute('data-cat') === cat);
+            });
+        };
+
+        window.selectUser = (role) => {
+            currentUserRole = role;
+            document.getElementById('btn-user-ppk').className = role === 'PPK' ? 'btn-outline-peach py-3 uppercase btn-active-peach' : 'btn-outline-peach py-3 uppercase';
+            document.getElementById('btn-user-phb').className = role === 'PHB' ? 'btn-outline-peach py-4 uppercase btn-active-peach' : 'btn-outline-peach py-4 uppercase';
+        };
+
+        function checkLoginStateAndSwitch() {
+            if (user && currentGroupId) {
+                document.getElementById('display-group').innerText = currentGroupId;
+                document.getElementById('display-role').innerText = currentUserRole;
+                document.getElementById('setup-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                listenToData();
+            } else {
+                document.getElementById('setup-screen').classList.remove('hidden');
+                document.getElementById('main-app').classList.add('hidden');
+            }
+        }
+
+        window.startApp = async () => {
+            const inputEl = document.getElementById('group-id');
+            const gid = inputEl ? inputEl.value.trim() : "";
+            
+            // 強制檢查：如果沒有代碼，跳出訊息並停止
+            if (!gid) {
+                showAlert("請輸入帳本代碼！");
+                inputEl.focus();
+                return;
+            }
+            if (!currentUserRole) {
+                showAlert("請選擇你的身分！");
+                return;
+            }
+
+            currentGroupId = gid;
+            try { 
+                await signInAnonymously(auth); 
+                checkLoginStateAndSwitch();
+            } catch (e) { 
+                console.error(e); 
+                showAlert("進入帳本失敗，請檢查網路連線");
+            }
+        };
+
+        window.logout = async () => { 
+            if (unsubscribe) unsubscribe(); 
+            currentUserRole = null; 
+            currentGroupId = null; 
+            await signOut(auth); 
+        };
+
+        onAuthStateChanged(auth, (u) => {
+            user = u;
+            checkLoginStateAndSwitch();
+        });
+
+        function listenToData() {
+            if (unsubscribe) unsubscribe();
+            const q = collection(db, 'artifacts', finalAppId, 'public', 'data', 'expenses');
+            unsubscribe = onSnapshot(q, (snapshot) => {
+                const records = [];
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if (data.groupId === currentGroupId) records.push({ id: doc.id, ...data });
+                });
+                records.sort((a, b) => {
+                    const timeA = a.createdAt ? a.createdAt.toDate().getTime() : 0;
+                    const timeB = b.createdAt ? b.createdAt.toDate().getTime() : 0;
+                    return timeB - timeA;
+                });
+                renderUI(records);
+            }, (err) => console.error(err));
+        }
+
+        function renderUI(records) {
+            const list = document.getElementById('list-container');
+            let tA = 0, tB = 0, tM = 0;
+            let cats = { '食': 0, '衣': 0, '住': 0, '行': 0, '樂': 0 };
+            const now = new Date();
+            const todayStr = now.toLocaleDateString();
+
+            list.innerHTML = records.length ? '' : '<div class="col-span-full text-center py-32 text-orange-200 italic font-bold">正等待你的第一筆紀錄...</div>';
+            
+            records.forEach(rec => {
+                const amt = Number(rec.amount) || 0;
+                const d = rec.createdAt ? rec.createdAt.toDate() : new Date();
+                
+                if (d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+                    tM += amt;
+                    if (cats.hasOwnProperty(rec.category)) cats[rec.category] += amt;
+                }
+                if (d.toLocaleDateString() === todayStr) {
+                    if (rec.userRole === 'PPK') tA += amt; else tB += amt;
+                }
+
+                const card = document.createElement('div');
+                card.className = 'flex items-center justify-between p-6 bg-white rounded-2xl animate-slide-up shadow-sm border border-orange-100/30 hover:shadow-md hover:border-orange-200 transition-all';
+                card.innerHTML = `
+                    <div class="flex items-center gap-5 overflow-hidden">
+                        <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-orange-50 text-orange-400 flex items-center justify-center font-black text-sm">${rec.category}</div>
+                        <div class="truncate">
+                            <div class="font-bold text-sm text-orange-700 truncate leading-tight">${rec.name}</div>
+                            <div class="text-[10px] text-orange-400 font-bold uppercase tracking-widest mt-1">${rec.userRole} • ${d.toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0 pl-4">
+                        <div class="text-2xl font-black italic text-orange-600">$${amt.toLocaleString()}</div>
+                        <button class="del-btn text-orange-200 hover:text-red-400 transition-all p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M4 7h16"/></svg>
+                        </button>
+                    </div>`;
+                card.querySelector('.del-btn').onclick = () => { 
+                    pendingDeleteId = rec.id; 
+                    document.getElementById('delete-modal').classList.remove('hidden'); 
+                };
+                list.appendChild(card);
+            });
+
+            document.getElementById('total-a').innerText = `$ ${tA.toLocaleString()}`;
+            document.getElementById('total-b').innerText = `$ ${tB.toLocaleString()}`;
+            document.getElementById('grand-total').innerText = `$ ${(tA + tB).toLocaleString()}`;
+            document.getElementById('monthly-total').innerText = `$ ${tM.toLocaleString()}`;
+            
+            document.getElementById('cat-food').innerText = `$ ${cats['食'].toLocaleString()}`;
+            document.getElementById('cat-cloth').innerText = `$ ${cats['衣'].toLocaleString()}`;
+            document.getElementById('cat-home').innerText = `$ ${cats['住'].toLocaleString()}`;
+            document.getElementById('cat-trans').innerText = `$ ${cats['行'].toLocaleString()}`;
+            document.getElementById('cat-play').innerText = `$ ${cats['樂'].toLocaleString()}`;
+        }
+
+        window.addRecord = async () => {
+            const n = document.getElementById('item-name').value.trim();
+            const aStr = document.getElementById('item-amount').value.replace(/,/g, '');
+            const a = Number(aStr);
+            if (!aStr || a <= 0) return showAlert("請輸入金額");
+            await addDoc(collection(db, 'artifacts', finalAppId, 'public', 'data', 'expenses'), { 
+                name: n || selectedCategory, amount: a, category: selectedCategory, 
+                groupId: currentGroupId, userRole: currentUserRole, createdAt: serverTimestamp() 
+            });
+            document.getElementById('item-name').value = ''; 
+            document.getElementById('item-amount').value = '';
+        };
+
+        window.closeDeleteModal = () => document.getElementById('delete-modal').classList.add('hidden');
+        document.getElementById('final-delete-btn').onclick = async () => {
+            if (pendingDeleteId) {
+                await deleteDoc(doc(db, 'artifacts', finalAppId, 'public', 'data', 'expenses', pendingDeleteId));
+                window.closeDeleteModal();
+            }
+        };
+    </script>
+</body>
+</html>
